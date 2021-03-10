@@ -1,0 +1,2 @@
+step 1: Install python 3.8 or higher 
+step 2: run this command 'pip3 install -r requirements.txt' 
