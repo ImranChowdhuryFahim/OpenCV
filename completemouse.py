@@ -58,7 +58,7 @@ if __name__ == "__main__":
     aWeight = 0.5
 
     # get the reference to the webcam
-    camera = cv2.VideoCapture(1)
+    camera = cv2.VideoCapture(0)
     cap = camera
     # region of interest (ROI) coordinates
     top, right, bottom, left = 10, 350, 225, 590
@@ -310,7 +310,7 @@ if __name__ == "__main__":
                 mLocOld=mouseLoc
         elif (len(conts) > 3):
             print ( " Remove yellow color from the background ")
-            #break
+            break
 
             
             
