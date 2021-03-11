@@ -1,10 +1,103 @@
-# organize imports
 import cv2
-import imutils
+import sys
 import numpy as np
+import imutils
 import math
 import wx
 from pynput.mouse import Button ,Controller
+def nothing(x):
+    pass
+
+useCamera=False
+
+# Check if filename is passed
+if (len(sys.argv) <= 1) :
+    print("'Usage: python hsvThresholder.py <ImageFilePath>' to ignore camera and use a local image.")
+    useCamera = True
+
+# Create a window
+cv2.namedWindow('image')
+
+# create trackbars for color change
+cv2.createTrackbar('HMin','image',0,179,nothing) # Hue is from 0-179 for Opencv
+cv2.createTrackbar('SMin','image',0,255,nothing)
+cv2.createTrackbar('VMin','image',0,255,nothing)
+cv2.createTrackbar('HMax','image',0,179,nothing)
+cv2.createTrackbar('SMax','image',0,255,nothing)
+cv2.createTrackbar('VMax','image',0,255,nothing)
+
+# Set default value for MAX MIN HSV trackbars.
+cv2.setTrackbarPos('HMax', 'image', 30)
+cv2.setTrackbarPos('SMax', 'image', 255)
+cv2.setTrackbarPos('VMax', 'image', 255)
+
+cv2.setTrackbarPos('HMin', 'image', 10)
+cv2.setTrackbarPos('SMin', 'image', 130)
+cv2.setTrackbarPos('VMin', 'image', 80)
+
+# Initialize to check if HSV min/max value changes
+hMin = sMin = vMin = hMax = sMax = vMax = 0
+phMin = psMin = pvMin = phMax = psMax = pvMax = 0
+
+# Output Image to display
+if useCamera:
+    cap = cv2.VideoCapture(0)
+    # Wait longer to prevent freeze for videos.
+    waitTime = 330
+else:
+    img = cv2.imread(sys.argv[1])
+    output = img
+    waitTime = 33
+
+while(1):
+
+    if useCamera:
+        # Capture frame-by-frame
+        ret, img = cap.read()
+        output = img
+
+    # get current positions of all trackbars
+    hMin = cv2.getTrackbarPos('HMin','image')
+    sMin = cv2.getTrackbarPos('SMin','image')
+    vMin = cv2.getTrackbarPos('VMin','image')
+
+    hMax = cv2.getTrackbarPos('HMax','image')
+    sMax = cv2.getTrackbarPos('SMax','image')
+    vMax = cv2.getTrackbarPos('VMax','image')
+
+    # Set minimum and max HSV values to display
+    lower = np.array([hMin, sMin, vMin])
+    upper = np.array([hMax, sMax, vMax])
+
+    # Create HSV Image and threshold into a range.
+    hsv = cv2.cvtColor(img, cv2.COLOR_BGR2HSV)
+    mask = cv2.inRange(hsv, lower, upper)
+    output = cv2.bitwise_and(img,img, mask= mask)
+
+    # Print if there is a change in HSV value
+    if( (phMin != hMin) | (psMin != sMin) | (pvMin != vMin) | (phMax != hMax) | (psMax != sMax) | (pvMax != vMax) ):
+        #print("(hMin = %d , sMin = %d, vMin = %d), (hMax = %d , sMax = %d, vMax = %d)" % (hMin , sMin , vMin, hMax, sMax , vMax))
+        phMin = hMin
+        psMin = sMin
+        pvMin = vMin
+        phMax = hMax
+        psMax = sMax
+        pvMax = vMax
+
+    # Display output image
+    cv2.imshow('image',output)
+
+    # Wait longer to prevent freeze for videos.
+    if cv2.waitKey(waitTime) & 0xFF == ord('y'):
+        break
+
+# Release resources
+if useCamera:
+    cap.release()
+cv2.destroyAllWindows()
+# organize imports
+print("(hMin = %d , sMin = %d, vMin = %d), (hMax = %d , sMax = %d, vMax = %d)" % (hMin , sMin , vMin, hMax, sMax , vMax))
+        
 needscroll = False 
 mouse = Controller()
 #https://pythonhosted.org/pynput/mouse.html
@@ -76,8 +169,8 @@ if __name__ == "__main__":
     # upper_g=np.array([102,255,255])
     # lower_g = np.array([155,25,0])
     # upper_g = np.array([179,255,255])
-    lower_g = np.array([22,93,0])
-    upper_g = np.array([45, 255, 255])
+    lower_g = np.array([phMin,psMin,pvMin])
+    upper_g = np.array([phMax, psMax, pvMax])
 
     #Kerenel
     kernelOpen=np.ones((5,5))
@@ -102,7 +195,7 @@ if __name__ == "__main__":
         (grabbed, frame) = camera.read()
 
         # resize the frame
-        frame = imutils.resize(frame, width=700)
+        frame = imutils.resize(frame, width=600)
 
         # flip the frame so that it is not the mirror view
         frame = cv2.flip(frame, 1)
@@ -204,9 +297,11 @@ if __name__ == "__main__":
 
             if count_defects == 4:
                 check = 0
+                #print(check)
                 mouse.scroll(0, 1)
             elif count_defects == 3:
                 check = 0
+                #print(check)
                 mouse.scroll(0,-1)
             elif count_defects < 3:
                 check = 1
@@ -240,7 +335,7 @@ if __name__ == "__main__":
         final_mask=another_mask
         
         conts,h=cv2.findContours(final_mask,cv2.RETR_EXTERNAL,cv2.CHAIN_APPROX_NONE)
-
+        #print("after: ",check)
         # Once 2 objects are detected the center of there distance will be the reference on controlling the mouse
         if(len(conts)==2 and check == 1):
 
@@ -270,8 +365,10 @@ if __name__ == "__main__":
             #adding the damping factor so that the movement of the mouse is smoother
             mouseLoc=mLocOld+((clx,cly)-mLocOld)/DampingFactor
             mouse.position=(sx-int((mouseLoc[0]*sx)/camx),int((mouseLoc[1]*sy)/camy))
-            while mouse.position!=(sx-int((mouseLoc[0]*sx)/camx),int((mouseLoc[1]*sy)/camy)):
-                pass
+            # print(mouse.position[0])
+            # print(mouseLoc)
+            # while mouse.position!=(sx-int((mouseLoc[0]*sx)/camx),int((mouseLoc[1]*sy)/camy)) or mouse.position[0] == 0:
+            #     pass
 
             #setting the old location to the current mouse location
             mLocOld=mouseLoc
@@ -280,14 +377,14 @@ if __name__ == "__main__":
             openx,openy,openw,openh=cv2.boundingRect(np.array([[[x1,y1],[x1+w1,y1+h1],[x2,y2],[x2+w2,y2+h2]]]))
             #print(check)
         #when there's only when object detected it will act as a left click mouse    
-        elif(len(conts)==1 and check == 1):
+        elif(len(conts)==1):
             x,y,w,h=cv2.boundingRect(conts[0])
-
+            #print(len(conts))
             # we check first and we allow the press fct if it's not pressed yet
             #we did that to avoid the continues pressing 
             if(isPressed==0):
-
-                if(abs((w*h-openw*openh)*100/(w*h))<30): #the difference between th combined rectangle for both objct and the 
+                print(abs((w*h-openw*openh)*100/(w*h)))
+                if(abs((w*h-openw*openh)*100/(w*h))<230): #the difference between th combined rectangle for both objct and the 
                     isPressed=1                          #the outer rectangle is not more than 30%
                     mouse.press(Button.left)
                     openx,openy,openw,openh=(0,0,0,0)
@@ -305,7 +402,7 @@ if __name__ == "__main__":
 
                 mouseLoc=mLocOld+((cx,cy)-mLocOld)/DampingFactor
                 mouse.position=(sx-int((mouseLoc[0]*sx)/camx),int((mouseLoc[1]*sy)/camy))
-                while mouse.position!=(sx-int((mouseLoc[0]*sx)/camx),int((mouseLoc[1]*sy)/camy)):
+                while mouse.position!=(sx-int((mouseLoc[0]*sx)/camx),int((mouseLoc[1]*sy)/camy)) or mouse.position[0] == 0:
                     pass
                 mLocOld=mouseLoc
         elif (len(conts) > 3):
@@ -320,7 +417,7 @@ if __name__ == "__main__":
 #Ending clicking and double click
 
         # if the user pressed "q", then stop looping
-        if keypress == ord("q"):
+        if cv2.waitKey(waitTime) & 0xFF == ord('q'):
             break
 
 # free up memory
